@@ -350,4 +350,4 @@ uiScale(S.ui);theme(S.theme);pickBrush('pen');setSize(1280,720);overlays();setup
  try{const L=await listP(),m=L.find(x=>x.id===localStorage.getItem('animate_last'))||L.sort((a,b)=>b.updated-a.updated)[0];if(m)await openProject(m.id);else{S.pid=uid();S.pname='Untitled';await saveProject()}}catch(e){S.pid=S.pid||uid();S.pname=S.pname||'Untitled'}})();
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&S.dirtyF)saveProject()});
 const App=Plat.P('App');if(App){App.addListener('backButton',()=>{if(dlgR)closeDlg();else if(cm)closeMenu();else if(stack.length){const t=stack[stack.length-1];t.onBack?t.onBack():t.close()}else App.minimizeApp?.()});App.addListener('appStateChange',s=>{if(!s.isActive&&S.dirtyF)saveProject()})}
-</script></body></html>
+</script> <script src="engine.js"></script></body></html>
