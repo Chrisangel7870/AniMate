@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" data-t="ember"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#14110f"><title>Animate</title>
+<meta name="theme-color" content="#14110f"><title>AniMate</title>
 <style>
 [data-t=ember]{--bg:#14110f;--pn:#1f1b18;--ln:#352f2a;--tx:#ece6df;--mu:#9a8f84;--ac:#ff7a3d;--ao:#1b0d05;--c1:#1c1815;--c2:#171310}
 [data-t=midnight]{--bg:#0d1220;--pn:#161d31;--ln:#27324d;--tx:#e4e9f5;--mu:#8793b0;--ac:#6ea8ff;--ao:#07101f;--c1:#121a2d;--c2:#0f1626}
@@ -72,8 +72,8 @@ dialog form{display:flex;flex-direction:column;gap:.9rem}dialog select{backgroun
 <div id="top">
  <span class="lg"><i>◐</i> Ani<i>Mate</i></span>
  <button class="b" id="bUndo" title="Undo">↶</button><button class="b" id="bRedo" title="Redo">↷</button><span class="sp"></span>
- <button class="b" id="mFile">☰<span class="lb">File</span></button><button class="b" id="mEdit">✎<span class="lb">Edit</span></button><button class="b" id="mView">👁<span class="lb">View</span></button><button class="b" id="mSnap">🧲<span class="lb">Snap</span></button><button class="b" id="mTheme">🎨<span class="lb">Theme</span></button><button class="b on" id="bExp">⬇<span class="lb">Export</span></button>
- <input type="file" id="file" hidden>
+ <button class="b" id="mFile">☰<span class="lb">File</span></button><button class="b" id="mEdit">✎<span class="lb">Edit</span></button><button class="b" id="mLayers">🥞<span class="lb">Layers</span></button><button class="b" id="mAudio">🎵<span class="lb">Audio</span></button><button class="b" id="mView">👁<span class="lb">View</span></button><button class="b" id="mSnap">🧲<span class="lb">Snap</span></button><button class="b" id="mTheme">🎨<span class="lb">Theme</span></button><button class="b on" id="bExp">⬇<span class="lb">Export</span></button>
+ <input type="file" id="file" hidden><input type="file" id="audioFile" accept="audio/*" hidden>
 </div>
 <div id="main">
  <div id="rail"><input type="color" id="col" value="#111111" title="Colour"><button class="b" id="bPal" title="Palette">▦</button><button class="b" id="bBr" title="Brushes"></button><button class="b" id="bSet" title="Brush settings">⚙</button></div>
@@ -88,21 +88,19 @@ dialog form{display:flex;flex-direction:column;gap:.9rem}dialog select{backgroun
  <div id="reel"></div></div>
 <div id="menu"></div>
 <script>
-const $=s=>document.querySelector(s),rnd=Math.random,clamp=(v,a,b)=>Math.min(b,Math.max(a,v)),sleep=t=>new Promise(r=>setTimeout(r,t)),norm=r=>((r+180)%360+360)%360-180;
+const $=s=>document.querySelector(s),rnd=()=>(window.__R?window.__R():Math.random()),clamp=(v,a,b)=>Math.min(b,Math.max(a,v)),sleep=t=>new Promise(r=>setTimeout(r,t)),norm=r=>((r+180)%360+360)%360-180;
 const view=$('#view'),stage=$('#stage'),ring=$('#ring'),reel=$('#reel'),menu=$('#menu'),oc=document.createElement('canvas'),TMP=document.createElement('canvas'),grid=document.createElement('div'),guide=document.createElement('div');
 grid.className=guide.className='ov';
-const S={W:1280,H:720,fr:[],shots:[],ins:1,clip:[],auto:60,dirtyF:0,pr:null,cur:0,fps:12,loop:1,play:0,onion:1,oOp:.35,oP:1,oN:0,tool:'pen',col:'#111111',size:6,op:1,sm:.4,spen:0,nav:0,fit:1,blend:'normal',mir:0,grid:0,theme:'ember',ui:1,recent:[],sn:{r:1,rs:15,z:1,p:1},v:{x:0,y:0,z:1,r:0}};
+const S={W:1280,H:720,fr:[],shots:[],ins:1,clip:[],auto:60,dirtyF:0,pr:null,cur:0,fps:12,loop:1,play:0,onion:1,oOp:.35,oP:1,oN:0,tool:'pen',col:'#111111',size:6,op:1,sm:.4,spen:0,nav:0,fit:1,blend:'normal',mir:0,grid:0,theme:'ember',ui:1,recent:[],sn:{r:1,rs:15,z:1,p:1},v:{x:0,y:0,z:1,r:0},layers:['Background','Line Art'],curL:1,audio:null,audioBuf:null,audioCtx:null,audioSrc:null};
 let SL=document.createElement('canvas'),SLx,TX,GP,K=null,timer=0,saveT=0;
 const P=(c,x,y,r)=>{c.beginPath();c.arc(x,y,r,0,7);c.fill()};
 const dots=(c,x,y,s,n,z,a0,a1)=>{for(let i=0;i<n;i++){const a=rnd()*6.283,r=Math.sqrt(rnd())*s/2;c.globalAlpha=a0+rnd()*a1;c.fillRect(x+Math.cos(a)*r,y+Math.sin(a)*r,z,z)}c.globalAlpha=1};
 const soft=(c,x,y,s,k,a)=>{const g=c.createRadialGradient(x,y,0,x,y,s/2);g.addColorStop(0,k+a);g.addColorStop(1,k+'00');c.fillStyle=g;c.fillRect(x-s/2,y-s/2,s,s)};
-/* paper tooth: noise tile punched out of textured strokes (destination-out) so pencils/charcoal/chalk grip the paper */
 const tile=(()=>{const n=document.createElement('canvas');n.width=n.height=128;const x=n.getContext('2d'),d=x.createImageData(128,128);for(let i=3;i<d.data.length;i+=4)d.data[i]=Math.pow(rnd(),.8)*255;x.putImageData(d,0,0);const t=document.createElement('canvas');t.width=t.height=256;t.getContext('2d').drawImage(n,0,0,256,256);return t})();
 const BC=document.createElement('canvas'),BCx=BC.getContext('2d');BC.width=BC.height=256;const hasF=(()=>{try{const c=document.createElement('canvas').getContext('2d');c.filter='blur(2px)';return c.filter==='blur(2px)'}catch(e){return false}})();
 const penF=(c,x,y,s,k)=>{c.fillStyle=k;P(c,x,y,s/2)};
 const ersF=(c,x,y,s)=>{c.save();c.globalCompositeOperation='destination-out';c.globalAlpha=S.op;c.fillStyle='#000';P(c,x,y,s/2);c.restore()};
 const clipC=(c,x,y,r)=>{c.beginPath();c.arc(x,y,r,0,7);c.clip()};
-/* g=grain strength, bl=blend, dir=draws straight onto frame, nm=no mirror, sh=shape */
 const B=[
 {id:'liner',grp:'Ink',n:'Fine liner',s:2,o:1,sp:.06,d:'M4 20l4-1 11-11-3-3L5 16zM15 5l3 3',f:penF},
 {id:'pen',grp:'Ink',n:'Ink pen',s:6,o:1,sp:.08,d:'M12 19l7-7 3 3-7 7zM18 13l-1.5-7.5L2 2l3.5 14.5L13 18zM2 2l7.6 7.6',f:penF},
@@ -137,7 +135,6 @@ const nf=s=>{const c=mk();return{c,x:c.getContext('2d'),undo:[],redo:[],s:s??(S.
 const UMAX=()=>clamp(Math.floor(2e8/(S.W*S.H*4)),3,30);
 const snap=c=>{const k=mk();k.getContext('2d').drawImage(c,0,0);return k};
 const put=(f,k)=>{f.x.save();f.x.globalCompositeOperation='copy';f.x.drawImage(k,0,0);f.x.restore()};
-/* ---- view transform + snapping ---- */
 function toC(px,py){const b=view.getBoundingClientRect(),v=S.v,dx=px-b.left-b.width/2-v.x,dy=py-b.top-b.height/2-v.y,a=-v.r*Math.PI/180,c=Math.cos(a),s=Math.sin(a);return{x:(dx*c-dy*s)/v.z+S.W/2,y:(dx*s+dy*c)/v.z+S.H/2}}
 function anchor(p,px,py){const b=view.getBoundingClientRect(),v=S.v,a=v.r*Math.PI/180,c=Math.cos(a),s=Math.sin(a),qx=(p.x-S.W/2)*v.z,qy=(p.y-S.H/2)*v.z;v.x=px-b.left-b.width/2-(qx*c-qy*s);v.y=py-b.top-b.height/2-(qx*s+qy*c)}
 function applyView(){const v=S.v;stage.style.transform=`translate(${v.x}px,${v.y}px) rotate(${v.r}deg) scale(${v.z})`;const z=Math.round(v.z*100);$('#zt').textContent=z+'%';$('#ro').textContent=`↻ ${Math.round(norm(v.r)*10)/10}°  ·  ${z}%`}
@@ -147,7 +144,6 @@ function fit(){const b=view.getBoundingClientRect();S.fit=1;S.v={x:0,y:0,z:Math.
 new ResizeObserver(()=>{if(S.fit)fit()}).observe(view);
 function zoomStep(d){S.fit=0;const v=S.v,o=v.z;let n;if(S.sn.z){const i=ZL.indexOf(snapZ(o));n=ZL[clamp(i+d,0,ZL.length-1)]}else n=clamp(o*(d>0?1.25:.8),.1,8);v.z=n;v.x*=n/o;v.y*=n/o;applyView()}
 function rot(d,reset){S.fit=0;const v=S.v,t=reset?-v.r:d,a=t*Math.PI/180,c=Math.cos(a),s=Math.sin(a),x=v.x;v.x=x*c-v.y*s;v.y=x*s+v.y*c;v.r=norm(v.r+t);applyView()}
-/* ---- project / frames ---- */
 function setSize(w,h,frames,shots){S.W=w;S.H=h;for(const c of[oc,SL,TMP]){c.width=w;c.height=h}SLx=SL.getContext('2d');TX=TMP.getContext('2d');GP=TX.createPattern(tile,'repeat');Object.assign(stage.style,{width:w+'px',height:h+'px',marginLeft:-w/2+'px',marginTop:-h/2+'px'});S.fr=frames||[nf(1)];S.shots=shots||[{id:1,name:'Shot 1'}];S.cur=0;S.ins=1;build();fit()}
 const SC=['#ff9f5a','#6ea8ff','#6fcf8a','#ff6b9a','#f4d35e','#b79cff','#4dd0e1','#ff8a80'];
 const shotOf=id=>S.shots.find(s=>s.id===id)||{id,name:'Shot'},scol=s=>s.col||SC[(s.id-1)%8],cards=()=>reel.querySelectorAll('.fr'),newShotId=()=>Math.max(0,...S.shots.map(s=>s.id))+1;
@@ -159,8 +155,9 @@ function build(){tidy();reel.replaceChildren();let box=null,last=null;const gap=
   box.append(gap(i));const d=document.createElement('div');d.className='fr';const c=document.createElement('canvas');c.width=96;c.height=Math.round(96*S.H/S.W);const s=document.createElement('span');s.textContent=i+1;d.append(c,s);d.dataset.i=i;box.append(d)});
  box.append(gap(S.fr.length));S.fr.forEach((_,i)=>thumb(i));markIns();go(S.cur)}
 function thumb(i){const c=cards()[i]?.firstChild;if(!c)return;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(S.fr[i].c,0,0,c.width,c.height)}
-function go(i){S.cur=clamp(i,0,S.fr.length-1);S.fr.forEach((f,j)=>{if(j!==S.cur){if(f.undo.length>2)f.undo.splice(0,f.undo.length-2);f.redo.length=0}});stage.replaceChildren(oc,F().c,grid,guide);onionR();const cs=cards();cs.forEach((e,j)=>e.classList.toggle('on',j==S.cur));cs[S.cur]?.scrollIntoView({inline:'center',block:'nearest'});$('#cnt').textContent=`${S.cur+1}/${S.fr.length} · ${shotOf(F().s).name} · ${S.fps}fps`;ur()}
-/* long-press a frame: lift it. Drag to reorder, or release in place for the frame menu */
+function playAudioAt(sec){if(!S.audioBuf)return;if(!S.audioCtx)S.audioCtx=new(window.AudioContext||window.webkitAudioContext)();if(S.audioSrc){try{S.audioSrc.stop()}catch(e){}}S.audioSrc=S.audioCtx.createBufferSource();S.audioSrc.buffer=S.audioBuf;S.audioSrc.connect(S.audioCtx.destination);S.audioSrc.start(0,sec)}
+function stopAudio(){if(S.audioSrc){try{S.audioSrc.stop()}catch(e){}}}
+function go(i){S.cur=clamp(i,0,S.fr.length-1);S.fr.forEach((f,j)=>{if(j!==S.cur){if(f.undo.length>2)f.undo.splice(0,f.undo.length-2);f.redo.length=0}});stage.replaceChildren(oc,F().c,grid,guide);onionR();const cs=cards();cs.forEach((e,j)=>e.classList.toggle('on',j==S.cur));cs[S.cur]?.scrollIntoView({inline:'center',block:'nearest'});$('#cnt').textContent=`${S.cur+1}/${S.fr.length} · ${shotOf(F().s).name} · ${S.fps}fps`;if(S.play)playAudioAt(S.cur/S.fps);ur()}
 let dr=null;
 reel.addEventListener('pointerdown',e=>{const c=e.target.closest('.fr');if(!c||S.play)return;dr={i:+c.dataset.i,c,id:e.pointerId,x:e.clientX,y:e.clientY,lift:0,moved:0,to:+c.dataset.i,sl:reel.scrollLeft};dr.t=setTimeout(()=>{if(!dr)return;dr.lift=1;c.classList.add('lift');Plat.buzz();try{c.setPointerCapture(dr.id)}catch(_){}},380)});
 reel.addEventListener('pointermove',e=>{if(!dr||e.pointerId!==dr.id)return;const dx=e.clientX-dr.x;if(!dr.lift){if(Math.hypot(dx,e.clientY-dr.y)>8){clearTimeout(dr.t);dr=null}return}
@@ -192,14 +189,12 @@ function playShot(r){if(S.play)toggle();if(r.to<=r.from)return toast('Shot needs
 const frameMenu=i=>[T('Duplicate frame',()=>dupF(i)),T('Copy frame',()=>copyF(i)),T('Cut frame',()=>copyF(i,1)),...(S.clip.length?[T(`Paste ${S.clip.length} frame${S.clip.length>1?'s':''} at cursor`,pasteAt)]:[]),T('Cursor before this frame',()=>{S.ins=i;markIns()}),T('Cursor after this frame',()=>{S.ins=i+1;markIns()}),T('Move left',()=>moveTo(i,i-1)),T('Move right',()=>moveTo(i,i+1)),T('Start new shot here',()=>splitShot(i)),T('Delete frame',()=>delF(i))];
 function shotMenu(id){const sh=shotOf(id),g=groups(),k=g.findIndex(x=>x.id===id),r=g[k];return[{h:sh.name+' · '+(r.to-r.from+1)+' frames'},T('Go to shot',()=>{go(r.from);S.ins=r.from+1;markIns()}),T('Play this shot',()=>playShot(r)),T('Rename…',()=>ask({title:'Rename shot',input:sh.name,ok:'Rename'}).then(n=>{if(n&&n.trim()){sh.name=n.trim().slice(0,24);build();saveSoon()}})),T('Change colour',()=>{sh.col=SC[(SC.indexOf(scol(sh))+1)%8];build();saveSoon()}),T('Copy shot',()=>{S.clip=S.fr.slice(r.from,r.to+1).map(f=>snap(f.c));toast(S.clip.length+' frames copied')}),T('Duplicate shot',()=>dupShot(r)),...(k>0?[T('Move shot earlier',()=>moveShot(k,-1)),T('Merge into previous shot',()=>{S.fr.slice(r.from,r.to+1).forEach(f=>f.s=g[k-1].id);build();saveSoon()})]:[]),...(k<g.length-1?[T('Move shot later',()=>moveShot(k,1))]:[]),T('Delete shot',()=>delShot(r))]}
 function flip(h){const f=F();push(f);const s=snap(f.c);f.x.save();f.x.globalCompositeOperation='copy';f.x.translate(h?S.W:0,h?0:S.H);f.x.scale(h?-1:1,h?1:-1);f.x.drawImage(s,0,0);f.x.restore();thumb(S.cur);saveSoon()}
-function toggle(){if(S.play){clearInterval(timer);S.play=0;S.pr=null}else{const lo=S.pr?S.pr[0]:0,hi=S.pr?S.pr[1]:S.fr.length-1;if(hi<=lo)return toast('Add a second frame first');S.play=1;if(S.cur<lo||S.cur>hi)go(lo);timer=setInterval(()=>{let n=S.cur+1;if(n>hi){if(!S.loop)return toggle();n=lo}go(n)},1000/S.fps)}$('#bPlay').textContent=S.play?'⏸':'▶';onionR()}
-/* ---- drawing engine ---- */
+function toggle(){if(S.play){clearInterval(timer);stopAudio();S.play=0;S.pr=null}else{const lo=S.pr?S.pr[0]:0,hi=S.pr?S.pr[1]:S.fr.length-1;if(hi<=lo)return toast('Add a second frame first');S.play=1;if(S.cur<lo||S.cur>hi)go(lo);timer=setInterval(()=>{let n=S.cur+1;if(n>hi){if(!S.loop)return toggle();n=lo}go(n)},1000/S.fps)}$('#bPlay').textContent=S.play?'⏸':'▶';onionR()}
 const pr=e=>e.pointerType==='pen'&&e.pressure>0?.3+.7*e.pressure:1;
 const mir=(x,y,a)=>{const o=[[x,y,a]];if(S.mir&1)o.push([S.W-x,y,Math.PI-a]);if(S.mir&2)o.push([x,S.H-y,-a]);if(S.mir==3)o.push([S.W-x,S.H-y,a+Math.PI]);return o};
 function stamp(x,y,sz,a){const b=K.b,t=b.dir?K.f.x:SLx;for(const[px,py,pa]of(b.nm?[[x,y,a]]:mir(x,y,a))){b.f(t,px,py,sz,S.col,pa);if(!b.dir)dirt(px,py,sz*1.6+4)}}
 function seg(a,b,p){const d=Math.hypot(b.x-a.x,b.y-a.y),sz=Math.max(1,S.size*p),step=Math.max(.6,sz*K.b.sp);if(d>.01)K.ang=Math.atan2(b.y-a.y,b.x-a.x);let t=K.acc;while(t<=d){const k=d?t/d:0;stamp(a.x+(b.x-a.x)*k,a.y+(b.y-a.y)*k,sz,K.ang||0);t+=step}K.acc=t-d}
 const dirt=(x,y,m)=>{const d=K.d;d[0]=Math.min(d[0],x-m);d[1]=Math.min(d[1],y-m);d[2]=Math.max(d[2],x+m);d[3]=Math.max(d[3],y+m)};
-/* only the region touched since the last frame is recomposited (all on GPU canvases) */
 function flush(){if(!K||!K.dirty)return;K.dirty=0;const b=K.b,d=K.d;let x0=Math.max(0,Math.floor(d[0])),y0=Math.max(0,Math.floor(d[1])),x1=Math.min(S.W,Math.ceil(d[2])),y1=Math.min(S.H,Math.ceil(d[3]));K.d=[1e9,1e9,-1e9,-1e9];if(K.full){x0=y0=0;x1=S.W;y1=S.H;K.full=0}const w=x1-x0,h=y1-y0;if(w<=0||h<=0)return;
  TX.globalCompositeOperation='source-over';TX.clearRect(x0,y0,w,h);TX.drawImage(SL,x0,y0,w,h,x0,y0,w,h);if(b.g){TX.globalCompositeOperation='destination-out';TX.globalAlpha=b.g;TX.fillStyle=GP;TX.fillRect(x0,y0,w,h);TX.globalAlpha=1;TX.globalCompositeOperation='source-over'}
  const x=K.f.x;x.save();x.globalCompositeOperation='source-over';x.clearRect(x0,y0,w,h);x.drawImage(K.base,x0,y0,w,h,x0,y0,w,h);x.globalAlpha=S.op;x.globalCompositeOperation=S.blend!=='normal'?S.blend:(b.bl||'source-over');x.drawImage(TMP,x0,y0,w,h,x0,y0,w,h);x.restore()}
@@ -217,7 +212,6 @@ function move(q){if(K.eye){pick(toC(q.clientX,q.clientY));return}const r=toC(q.c
  const l=K.last,k=1-S.sm,n={x:l.x+(r.x-l.x)*k,y:l.y+(r.y-l.y)*k};seg(l,n,pr(q));K.last=n;K.dirty=!b.dir}
 function end(){if(K.eye){K=null;return}if(K.tgt)stepDir();flush();const i=S.fr.indexOf(K.f);K=null;thumb(i);saveSoon()}
 function cancel(){if(!K)return;if(!K.eye){put(K.f,K.base);K.f.undo.pop();ur()}K=null}
-/* ---- pointer input ---- */
 const ptr=new Map();let g=null,pan=null;
 const mid=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2}),dist=(a,b)=>Math.hypot(b.x-a.x,b.y-a.y),ang=(a,b)=>Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI;
 function ringAt(e){if(e.pointerType==='touch'||S.nav||S.play||br().fill||br().eye){ring.style.display='none';return}const b=view.getBoundingClientRect(),d=Math.max(4,S.size*S.v.z);Object.assign(ring.style,{display:'block',width:d+'px',height:d+'px',left:e.clientX-b.left+'px',top:e.clientY-b.top+'px'})}
@@ -232,7 +226,6 @@ view.addEventListener('pointermove',e=>{ringAt(e);const p=ptr.get(e.pointerId);i
 const up=e=>{if(!ptr.has(e.pointerId))return;ptr.delete(e.pointerId);if(K&&K.id===e.pointerId)end();if(ptr.size<2)g=null;if(ptr.size<2)pan=null};
 view.addEventListener('pointerup',up);view.addEventListener('pointercancel',up);view.addEventListener('pointerleave',()=>ring.style.display='none');view.addEventListener('contextmenu',e=>e.preventDefault());
 view.addEventListener('wheel',e=>{e.preventDefault();const c=toC(e.clientX,e.clientY);S.fit=0;let z=clamp(S.v.z*Math.exp(-e.deltaY*.0015),.1,8);if(S.sn.z)z=snapZ(z);S.v.z=z;anchor(c,e.clientX,e.clientY);applyView()},{passive:false});
-/* ---- popup menus (one open at a time; positioned inside the screen) ---- */
 let cm=null;
 const svg=d=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
 function closeMenu(){menu.style.display='none';cm=null}
@@ -257,6 +250,8 @@ const PAL=['#111111','#ffffff','#ef4444','#f97316','#facc15','#22c55e','#06b6d4'
 const menus={
  mFile:()=>[{h:'Project: '+S.pname},T('Projects…',async()=>{if(S.dirtyF)await saveProject();projectsPage()}),T('New project…',newPage),T('Save now',()=>saveProject('Saved')),T('Export…',exportPage),{h:'Backup'},T('Import project file…',()=>$('#file').click()),T('Save backup (.anim)',backup),{h:'Auto-save to this device'},{r:'Every',min:0,max:8,v:AUTO.findIndex(a=>a[0]===S.auto),fmt:i=>AUTO[i][1],set:i=>{S.auto=AUTO[i][0];setupAuto();prefs()}}],
  mEdit:()=>[T('Undo',undo),T('Redo',redo),T('Copy frame',()=>copyF(S.cur)),T('Paste at cursor',pasteAt),T('Duplicate all frames (×2)',doubleAll),T('Clear frame',()=>{push(F());F().x.clearRect(0,0,S.W,S.H);thumb(S.cur);saveSoon()}),T('Flip frame ↔',()=>flip(1)),T('Flip frame ↕',()=>flip(0))],
+ mLayers:()=>[...S.layers.map((l,i)=>C(`Layer ${i+1}: ${l}`,S.curL===i,()=>{S.curL=i;go(S.cur)})),T('Add Layer',()=>{S.layers.push('Layer '+(S.layers.length+1));S.curL=S.layers.length-1;go(S.cur)})],
+ mAudio:()=>[T(S.audioBuf?'Change Audio File':'Load Audio File',()=>$('#audioFile').click()),...(S.audioBuf?[T('Remove Audio',()=>{S.audioBuf=null;S.audio=null;toast('Audio track removed')})]:[])],
  mView:()=>[C('Pan mode',S.nav,()=>{S.nav=!S.nav;view.style.cursor=S.nav?'grab':'crosshair'}),C('Stylus only (fingers pan/zoom)',S.spen,()=>S.spen=!S.spen),C('Grid',S.grid,()=>{S.grid=!S.grid;overlays()}),T('Rotate −',()=>rot(-S.sn.rs),{keep:1}),T('Rotate +',()=>rot(S.sn.rs),{keep:1}),T('Reset rotation',()=>rot(0,1)),T('Fit to screen',fit)],
  mSnap:()=>[C('Snap rotation',S.sn.r,()=>{S.sn.r=!S.sn.r;prefs()}),C('Rotation step: '+S.sn.rs+'°',undefined,()=>{const s=[5,15,45,90];S.sn.rs=s[(s.indexOf(S.sn.rs)+1)%4];prefs()}),C('Snap zoom to presets',S.sn.z,()=>{S.sn.z=!S.sn.z;prefs()}),C('Snap pan to centre',S.sn.p,()=>{S.sn.p=!S.sn.p;prefs()})],
  mTheme:()=>[...THEMES.map(([k,n])=>C(n,S.theme===k,()=>theme(k))),{h:'Interface size'},{r:'Scale',min:70,max:170,step:10,v:Math.round(S.ui*100),fmt:v=>v+'%',set:v=>uiScale(v/100)}],
@@ -266,13 +261,13 @@ const menus={
  bSet:()=>[{r:'Size',min:1,max:200,v:S.size,fmt:v=>v+'px',set:v=>S.size=br().s=v},{r:'Opacity',min:5,max:100,v:Math.round(S.op*100),fmt:v=>v+'%',set:v=>S.op=br().o=v/100},{r:'Stabilizer',min:0,max:90,v:Math.round(S.sm*100),fmt:v=>v+'%',set:v=>S.sm=v/100},C('Blend: '+S.blend,undefined,()=>S.blend=BL[(BL.indexOf(S.blend)+1)%BL.length]),C('Symmetry: '+MIR[S.mir],undefined,()=>{S.mir=(S.mir+1)%4;overlays()})]};
 const side=['bPal','bBr','bSet'],up2=['cnt'];
 for(const id in menus)$('#'+id).onclick=()=>openMenu($('#'+id),menus[id],{side:side.includes(id),up:up2.includes(id)});
+$('#audioFile').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=async ev=>{const ctx=new(window.AudioContext||window.webkitAudioContext)();S.audioCtx=ctx;S.audioBuf=await ctx.decodeAudioData(ev.target.result);toast('Audio track loaded!')};r.readAsArrayBuffer(f)};
 $('#col').oninput=e=>S.col=e.target.value;$('#col').onchange=e=>setCol(e.target.value,1);
 $('#bUndo').onclick=undo;$('#bRedo').onclick=redo;$('#bPlay').onclick=toggle;$('#bPrev').onclick=()=>go(S.cur-1);$('#bNext').onclick=()=>go(S.cur+1);$('#bAdd').onclick=()=>addF();$('#bDbl').onclick=doubleAll;
 $('#zi').onclick=()=>zoomStep(1);$('#zo').onclick=()=>zoomStep(-1);$('#zr').onclick=fit;
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'&&e.target.type!=='range'&&e.target.type!=='checkbox')return;const m=e.ctrlKey||e.metaKey,k=e.key.toLowerCase();
  if(m&&k==='z'){e.preventDefault();e.shiftKey?redo():undo()}else if(m&&k==='y'){e.preventDefault();redo()}else if(k==='arrowleft')go(S.cur-1);else if(k==='arrowright')go(S.cur+1);else if(k==='enter')toggle()});
 let tt;function toast(t){const e=$('#toast');e.textContent=t;e.style.opacity=1;clearTimeout(tt);tt=setTimeout(()=>e.style.opacity=0,1600)}
-/* ---- files ---- */
 const dl=(blob,name)=>{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4e3)};
 const data=()=>({v:3,w:S.W,h:S.H,fps:S.fps,shots:S.shots,frames:S.fr.map(f=>({u:f.c.toDataURL(),s:f.s}))});
 async function loadData(d){if(!d||!d.frames?.length)throw 0;S.W=d.w||1280;S.H=d.h||720;S.fps=d.fps||12;const fr=await Promise.all(d.frames.map(o=>new Promise(r=>{const i=new Image(),f=nf(o.s||1);i.onload=()=>{f.x.drawImage(i,0,0,S.W,S.H);r(f)};i.onerror=()=>r(f);i.src=o.u||o})));setSize(S.W,S.H,fr,d.shots)}
@@ -280,14 +275,12 @@ const AUTO=[[0,'Off'],[30,'30 sec'],[60,'1 min'],[120,'2 min'],[300,'5 min'],[60
 const uid=()=>Date.now().toString(36)+rnd().toString(36).slice(2,6),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])),ago=t=>{const m=Math.round((Date.now()-t)/6e4);return m<1?'just now':m<60?m+' min ago':m<1440?Math.round(m/60)+' h ago':Math.round(m/1440)+' d ago'};
 function setupAuto(){clearInterval(autoT);if(S.auto)autoT=setInterval(()=>{if(S.dirtyF&&!K&&!S.saving)saveProject('Auto-saved')},S.auto*1000)}
 function saveSoon(){S.dirtyF=1}
-/* ---- platform layer: native file save/share + haptics inside the APK/iOS app, browser fallback elsewhere ---- */
 const Plat={P:n=>window.Capacitor?.Plugins?.[n],native:()=>!!window.Capacitor?.isNativePlatform?.(),
  async save(blob,name){const FS=this.P('Filesystem'),SH=this.P('Share');
   if(this.native()&&FS&&SH){try{const b64=await new Promise((r,j)=>{const fr=new FileReader();fr.onload=()=>r(fr.result.split(',')[1]);fr.onerror=j;fr.readAsDataURL(blob)});const o=await FS.writeFile({path:name,data:b64,directory:'CACHE'});await SH.share({title:name,url:o.uri,dialogTitle:'Save or share'});return true}catch(e){if(/cancel/i.test(e?.message||''))return false;toast('Could not save: '+(e?.message||e));return false}}
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4e3);return true},
  buzz(){const H=this.P('Haptics');if(H)H.impact({style:'MEDIUM'});else navigator.vibrate?.(15)}};
 const backup=()=>Plat.save(new Blob([JSON.stringify(data())],{type:'application/json'}),(S.pname||'project').replace(/[^\w\- ]+/g,'')+'.anim');
-/* ---- project storage: IndexedDB (frames kept as PNG blobs) ---- */
 const DB=new Promise((res,rej)=>{const r=indexedDB.open('animate',1);r.onupgradeneeded=()=>{r.result.createObjectStore('meta',{keyPath:'id'});r.result.createObjectStore('data',{keyPath:'id'})};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
 const tx=(st,mode,fn)=>DB.then(d=>new Promise((res,rej)=>{const t=d.transaction(st,mode),r=fn(t);t.oncomplete=()=>res(r&&r.result);t.onerror=t.onabort=()=>rej(t.error)}));
 const listP=()=>tx('meta','readonly',t=>t.objectStore('meta').getAll()),getM=id=>tx('meta','readonly',t=>t.objectStore('meta').get(id)),getD=id=>tx('data','readonly',t=>t.objectStore('data').get(id));
@@ -301,7 +294,6 @@ async function dupProject(id){const[m,d]=await Promise.all([getM(id),getD(id)]),
 async function delProject(id){await tx(['meta','data'],'readwrite',t=>{t.objectStore('meta').delete(id);return t.objectStore('data').delete(id)});if(id===S.pid){S.dirtyF=0;const L=(await listP()).sort((a,b)=>b.updated-a.updated);if(L.length)await openProject(L[0].id);else await newProject('Untitled',1280,720,12)}}
 async function importAnim(d,name){if(S.dirtyF&&S.pid)await saveProject();S.pid=uid();S.pname=name||'Imported';await loadData(d);await saveProject('Imported');pjApi&&stack.includes(pjApi)&&pjApi.refresh()}
 $('#file').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{await importAnim(JSON.parse(await f.text()),f.name.replace(/\.\w+$/,''))}catch(x){toast('Not a valid project file')}};
-/* ---- custom dialogs & pages ---- */
 let dlgR=null;
 function ask(o){return new Promise(res=>{closeDlg();const w=document.createElement('div');w.id='dlgW';w.innerHTML=`<div class=dlg><b>${esc(o.title||'')}</b>${o.msg?`<p>${esc(o.msg)}</p>`:''}${o.input!==undefined?'<input class=in id=dlgI>':''}<div class=row2>${o.nocancel?'':`<button class=b id=dlgC>${o.cancel||'Cancel'}</button>`}<button class="b ${o.danger?'dng':'on'}" id=dlgO>${o.ok||'OK'}</button></div></div>`;document.body.append(w);const i=w.querySelector('#dlgI');if(i){i.value=o.input;setTimeout(()=>{i.focus();i.select()},60);i.onkeydown=e=>{if(e.key==='Enter')dlgR(i.value)}}
  dlgR=v=>{w.remove();dlgR=null;res(v)};w.querySelector('#dlgO').onclick=()=>dlgR(i?i.value:true);const c=w.querySelector('#dlgC');if(c)c.onclick=()=>dlgR(i?null:false)})}
@@ -343,7 +335,6 @@ function exportPage(){const X={fmt:'v',res:'n',rng:'all',q:'h',tr:0,w:clamp(S.W,
    if(X.abort)toast('Export cancelled');else if(await Plat.save(new Blob(ch,{type:mt}),name+(mt.includes('mp4')?'.mp4':'.webm'))){api.close();toast('Export complete')}}}
   catch(e){toast('Export failed: '+(e.message||e))}finally{X.busy=0;q('#xG').disabled=false;q('#xX').textContent='Cancel';P.hidden=true}}})}
 $('#bExp').onclick=exportPage;
-/* ---- boot ---- */
 try{const p=JSON.parse(localStorage.getItem('animate_prefs')||'{}');if(p.sn)Object.assign(S.sn,p.sn);if(p.u)S.ui=p.u;if(p.a!==undefined)S.auto=p.a;S.theme=p.t||'ember'}catch(e){}
 uiScale(S.ui);theme(S.theme);pickBrush('pen');setSize(1280,720);overlays();setupAuto();
 (async()=>{navigator.storage?.persist?.();
