@@ -12,7 +12,25 @@ const rng=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.i
 const enc=p=>{const o=[];let a=0,b=0;for(let i=0;i<p.length;i+=2){const x=Math.round(p[i]*10),y=Math.round(p[i+1]*10);o.push(x-a,y-b);a=x;b=y}return o};
 const dec=o=>{const p=[];let a=0,b=0;for(let i=0;i<o.length;i+=2){a+=o[i];b+=o[i+1];p.push(a/10,b/10)}return p};
 const toBlob=c=>new Promise(r=>c.toBlob(r,'image/png'));
-const dl=(b,n)=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=n;a.click()};
+const dl=async(b,n)=>{
+  const C=window.Capacitor,FS=C&&C.Plugins&&C.Plugins.Filesystem;
+  if(FS&&C.isNativePlatform&&C.isNativePlatform()){
+    try{
+      try{await FS.requestPermissions()}catch(e){}
+      const CH=3*1024*1024,p='FlipAnim/'+n;let first=true;
+      for(let o=0;o<b.size;o+=CH){
+        const u=new Uint8Array(await b.slice(o,o+CH).arrayBuffer());let s='';
+        for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));
+        const data=btoa(s);
+        if(first){await FS.writeFile({path:p,data,directory:'DOCUMENTS',recursive:true});first=false}
+        else await FS.appendFile({path:p,data,directory:'DOCUMENTS'});
+      }
+      alert('Saved to Documents/'+p);
+    }catch(e){alert('Save failed: '+(e.message||e))}
+    return;
+  }
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=n;a.click();
+};
 
 let uid=0,live=null,liveR=null,ready=false,L=null,O=null,st=0;
 const lru=[],pool=[];
