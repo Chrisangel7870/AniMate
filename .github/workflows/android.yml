@@ -17,10 +17,17 @@ jobs:
           java-version: 21
       - name: Install dependencies
         run: npm install
+      - name: Add Filesystem plugin (matching Capacitor version)
+        run: |
+          MAJOR=$(node -p "require('@capacitor/core/package.json').version.split('.')[0]")
+          npm install @capacitor/filesystem@^$MAJOR
       - name: Create Android project
         run: npx cap add android
       - name: Sync web assets and plugins
         run: npx cap sync android
+      - name: Add storage permission for older Android
+        run: |
+          sed -i 's#<application#<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>\n    <application#' android/app/src/main/AndroidManifest.xml
       - name: Build debug APK
         run: |
           cd android
